@@ -55,5 +55,10 @@ Multi-document support
 Vector database integration
 Better UI/UX
 
+Prerequisites:
+- Python 3.x
+- Ollama installed
+- Mistral model pulled
+
 Created as part of an AI/LLM assignment project.
 
