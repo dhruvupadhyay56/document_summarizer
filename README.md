@@ -44,4 +44,16 @@ Pull the Mistral model : ollama pull mistral
 Terminal version : python app.py
 Streamlit UI version : streamlit run app.py
 
+Limitations:-
+Very large documents may increase processing time
+Local model performance depends on system hardware
+Some context may still be lost across chunk boundaries
+Summary quality depends on the selected LLM
+
+Future Improvements:-
+Multi-document support
+Vector database integration
+Better UI/UX
+
 Created as part of an AI/LLM assignment project.
+
