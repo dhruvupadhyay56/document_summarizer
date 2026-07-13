@@ -1,83 +1,64 @@
-from langchain_ollama import ChatOllama
-from langchain_community.text_splitter import RecursiveCharacterTextSplitter # type: ignore
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.chains.summarize import load_summarize_chain # type: ignore
-from langchain_community.document_transformers import EmbeddingsClusteringFilter
-from langchain.embeddings import HuggingFaceBgeEmbeddings
-from chunking import chunk_text
-from summarizer import summarize_chunk, generate_final_summary
-
-
-def extract(file_path):
-    loader = PyPDFLoader(file_path)
-    pages = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000, chunk_overlap=0
-    )
-    texts = text_splitter.split_documents(pages)
-    return texts
-
-
-def chunk_text(text, chunk_size=2000, overlap=200):
-    chunks = []
-    start = 0
-
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-
-    return chunks
-
-from openai import OpenAI
 import os
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-def summarize_chunk(chunk):
-    prompt = f"""
-    Summarize this document chunk:
-
-    {chunk}
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    return response.choices[0].message.content
-
-def generate_final_summary(chunk_summaries):
-    combined = "\n".join(chunk_summaries)
-
-    prompt = f"""
-    Create a structured summary with:
-
-    1. Executive Summary
-    2. Key Points
-    3. Risks or Concerns
-    4. Opportunities
-    5. Action Items
-
-    Here is the content:
-    {combined}
-    """   
+import tempfile
+import streamlit as st
 
 from pdf_reader import extract_text
 from chunking import chunk_text
 from summarizer import summarize_chunk, generate_final_summary
 
-text = extract_text("sample.pdf")
+st.set_page_config(
+    page_title="Document Summarizer",
+    page_icon="📄",
+    layout="wide"
+)
 
-chunks = chunk_text(text)
+st.title("📄 AI Document Summarizer")
 
-chunk_summaries = []
+uploaded_file = st.file_uploader(
+    "Upload a PDF",
+    type=["pdf"]
+)
 
-for chunk in chunks:
-    summary = summarize_chunk(chunk)
-    chunk_summaries.append(summary)
+if uploaded_file:
 
-final_summary = generate_final_summary(chunk_summaries)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+        temp_pdf.write(uploaded_file.read())
+        pdf_path = temp_pdf.name
 
-print(final_summary)
+    try:
+
+        with st.spinner("Extracting text..."):
+            text = extract_text(pdf_path)
+
+        if not text.strip():
+            st.error("No readable text found inside the PDF.")
+            st.stop()
+
+        with st.spinner("Splitting document..."):
+            chunks = chunk_text(text)
+
+        summaries = []
+
+        progress = st.progress(0)
+
+        for index, chunk in enumerate(chunks):
+            summary = summarize_chunk(chunk)
+            summaries.append(summary)
+
+            progress.progress((index + 1) / len(chunks))
+
+        with st.spinner("Generating final summary..."):
+            final_summary = generate_final_summary(summaries)
+
+        st.success("Summary Generated!")
+
+        st.subheader("Final Summary")
+
+        st.markdown(final_summary)
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+    finally:
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
