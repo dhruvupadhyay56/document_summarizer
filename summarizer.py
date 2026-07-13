@@ -1,18 +1,24 @@
 import ollama
 
+MODEL = "mistral"
+
 
 def summarize_chunk(chunk):
-    prompt = f"""
-    Summarize this document chunk clearly.
 
-    Document chunk:
-    {chunk}
-    """
+    prompt = f"""
+Summarize the following document section.
+
+Document:
+{chunk}
+"""
 
     response = ollama.chat(
-        model="mistral",
+        model=MODEL,
         messages=[
-            {"role": "user", "content": prompt}
+            {
+                "role": "user",
+                "content": prompt
+            }
         ]
     )
 
@@ -20,27 +26,36 @@ def summarize_chunk(chunk):
 
 
 def generate_final_summary(chunk_summaries):
-    combined_summaries = "\n".join(chunk_summaries)
+
+    combined = "\n\n".join(chunk_summaries)
 
     prompt = f"""
-    Based on these chunk summaries, create a structured report.
+Using the summaries below, generate one professional report.
 
-    Format strictly as:
+Use exactly these headings:
 
-    Executive Summary:
-    Key Points:
-    Risks or Concerns:
-    Opportunities:
-    Action Items:
+# Executive Summary
 
-    Content:
-    {combined_summaries}
-    """
+# Key Points
+
+# Risks or Concerns
+
+# Opportunities
+
+# Action Items
+
+Summaries:
+
+{combined}
+"""
 
     response = ollama.chat(
-        model="mistral",
+        model=MODEL,
         messages=[
-            {"role": "user", "content": prompt}
+            {
+                "role": "user",
+                "content": prompt
+            }
         ]
     )
 
